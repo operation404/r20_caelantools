@@ -1,6 +1,6 @@
 var CTModule = CTModule || {
-    version: 0.3,
-    debug_mode: false,
+    version: 0.4,
+    debug_mode: true,
     valid_commands: ["CraftingRoller","SuccessCounter"],
     craft_check_result_table: {
         "0.00": 5,
