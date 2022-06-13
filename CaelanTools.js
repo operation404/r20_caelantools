@@ -135,7 +135,8 @@ var CTModule = CTModule || {
         
         let dice_roll, num_rolls, target_value, crit_success_range, 
             crit_fail_range, black_crusade_degrees, roll_under_or_over,
-            bc_unnatural, bc_firing_mode;
+            bc_unnatural, bc_firing_mode, display_successes, damage_roll,
+			crit_damage_roll;
         
         if (!args.hasOwnProperty("dice_roll")) {log("Missing dice_roll arg."); return;}
         if (!args.hasOwnProperty("num_rolls")) {log("Missing num_rolls arg."); return;}
@@ -152,12 +153,23 @@ var CTModule = CTModule || {
         crit_fail_range = args.hasOwnProperty("crit_fail_range") ?
                             parseInt(args["crit_fail_range"]) : 0;
         if (isNaN(crit_fail_range)) {log("crit_fail_range is not a number."); return;}
-        black_crusade_degrees = args.hasOwnProperty("black_crusade_degrees") ?
-                                args["black_crusade_degrees"] == "true" : false;
         roll_over_target = args.hasOwnProperty("roll_over_target") ?
                             args["roll_over_target"] == "true" : true;
-        if (black_crusade_degrees) {roll_over_target = false;}
-        
+							
+		// Display successes will log a message in the chat with the values of
+		// the rolls that passed. If damage rolls are provided, those will also
+		// be rolled for any successes.
+		display_successes = args.hasOwnProperty("display_successes") ?
+                            args["display_successes"] == "true" : false;
+		damage_roll = args.hasOwnProperty("damage_roll") && display_successes ?
+                            args["damage_roll"] : "";
+		crit_damage_roll = args.hasOwnProperty("crit_damage_roll") && display_successes ?
+                            args["crit_damage_roll"] : "";
+							
+							
+		black_crusade_degrees = args.hasOwnProperty("black_crusade_degrees") &&
+								roll_over_target == false ?
+                                args["black_crusade_degrees"] == "true" : false;
         bc_unnatural = args.hasOwnProperty("bc_unnatural") ?
                             parseInt(args["bc_unnatural"]) : 0;
         if (isNaN(bc_unnatural)) {log("bc_unnatural is not a number."); return;}
@@ -221,18 +233,23 @@ var CTModule = CTModule || {
                 rolls_examined += 1;
                 
                 if (roll_over_target) {
+					
                     // Crit successes are auto passes
                     if (crit_success_range && main_die_face >= crit_success_range) {
                         crit_successes += 1;
                         successes += 1;
+						
                     // Crit fails are auto fails
                     } else if (crit_fail_range && main_die_face <= crit_fail_range) {
                         crit_fails += 1;
+						
                     // If no crit, check if roll met the target
                     } else if (roll_total >= target_value) {
                         successes += 1;
                     }
+					
                 } else {
+					
                     // Crit successes are auto passes
                     if (crit_success_range && main_die_face <= crit_success_range) {
                         crit_successes += 1;
@@ -403,7 +420,8 @@ var CTModule = CTModule || {
                                                 + roll_total + "))/10) + floor(" + 
                                                 bc_unnatural + "/2)]] ";*/
                         }
-                    } else {
+                    
+					} else {
                         
                         // Handle black crusade degrees of failure
                         if (black_crusade_degrees) {
@@ -412,7 +430,6 @@ var CTModule = CTModule || {
                         }
                     }
                 }
-            
             }
             
             display_msg = "Successes: " + successes;
@@ -441,24 +458,27 @@ var CTModule = CTModule || {
     },
     
     HandleMessage: function(msg){
-        if(msg.type == "api" && msg.content.indexOf("!ct ") !== -1) {
+		let command_keyword_match = msg.content.match(/^[!]ct\b/);
+        if(msg.type === "api" && command_keyword_match) {
+			
             // Parse message content for individual args           
             let parsed_args = CTModule.CTparse(msg.content);
-            
-            // Check for null, if so do nothing
             if (parsed_args == null) {return;}
             
             if (parsed_args.hasOwnProperty("cmd") == false) {
-                log("No command flag.");
+				log("No command argument.");
+				
             } else {
-                let command = parsed_args["cmd"];
+                let command = parsed_args["cmd"];				
                 if (CTModule.debug_mode) {log(command);}
+				
                 if (CTModule.valid_commands.includes(command)) {
                     delete parsed_args["cmd"];
                     CTModule[command](parsed_args);
+					
                 } else {
-                    log("Command not legal or doesn't exit.");
-                };
+					log("Command not legal or doesn't exist.");
+				}
             }
         }
     },
@@ -480,7 +500,7 @@ var CTModule = CTModule || {
         arg_dict = {};
         const word_list = str.split('-');
 
-        let api_key_pattern = /^([!]ct\s+)$/;
+        let api_key_pattern = /^[!]ct\s+$/;
         if (api_key_pattern.test(word_list[0]) == false) {
             log("Non-parameter characters following api key.");
             return null;
