@@ -130,7 +130,13 @@ var CTModule = CTModule || {
         if (CTModule.debug_mode) {log("SuccessCounter called.");}
         if (CTModule.IsObjectEmpty(args)) {
             // Display help message
-            sendChat('CTModule', "Usage: !ct -cmd SuccessCounter");
+            sendChat('CTModule', "Usage: !ct -cmd SuccessCounter -num_rolls &lt;int&gt; "
+					+ "-dice_roll &lt;string&gt; -target_value &lt;int&gt; [optional: "
+					+ "-crit_success_range &lt;int&gt; -crit_fail_range &lt;int&gt; "
+					+ "-roll_over_target &lt;bool&gt; -display_successes &lt;bool&gt; "
+					+ "-damage_roll &lt;string&gt; -crit_damage_roll &lt;string&gt; "
+					+ "-black_crusade_degrees &lt;bool&gt; -bc_unnatural &lt;int&gt; "
+					+ "-bc_firing_mode &lt;string&gt; [optional: &lt;int&gt;]]");
         }
         
         let dice_roll, num_rolls, target_value, crit_success_range, 
@@ -163,7 +169,7 @@ var CTModule = CTModule || {
                             args["display_successes"] == "true" : false;
 		damage_roll = args.hasOwnProperty("damage_roll") && display_successes ?
                             args["damage_roll"] : "";
-		crit_damage_roll = args.hasOwnProperty("crit_damage_roll") && display_successes ?
+		crit_damage_roll = args.hasOwnProperty("crit_damage_roll") && damage_roll !== "" ?
                             args["crit_damage_roll"] : "";
 							
 							
@@ -209,6 +215,7 @@ var CTModule = CTModule || {
             let crit_successes = 0;
             let crit_fails = 0;
             let black_crusade_msg = "\n";
+			let display_successes_msg = "\n";
             
             // Supposedly ops is an array of operations returned by sendChat, but
             // I have no idea when it would ever contain more than 1 item.
@@ -239,6 +246,22 @@ var CTModule = CTModule || {
                         crit_successes += 1;
                         successes += 1;
 						
+						// Handle success display message
+						if (display_successes) {
+							display_successes_msg += "[[" + roll_total + "d1cs>1cf<0]]";
+							
+							// If given a critical damage roll, display it
+							if (crit_damage_roll !== "") {
+								display_successes_msg += "_[[" + crit_damage_roll + "]]";
+								
+							// If no crit damage roll is present but a normal one is, display it
+							} else if (damage_roll !== "") {
+								display_successes_msg += "_[[" + damage_roll + "]]";
+							}
+							
+							display_successes_msg += "  ";
+						}
+						
                     // Crit fails are auto fails
                     } else if (crit_fail_range && main_die_face <= crit_fail_range) {
                         crit_fails += 1;
@@ -246,6 +269,18 @@ var CTModule = CTModule || {
                     // If no crit, check if roll met the target
                     } else if (roll_total >= target_value) {
                         successes += 1;
+						
+						// Handle success display message
+						if (display_successes) {
+							display_successes_msg += "[[" + roll_total + "]]";
+							
+							// If given a damage roll, display it
+							if (damage_roll !== "") {
+								display_successes_msg += "_[[" + damage_roll + "]]";
+							}
+							
+							display_successes_msg += "  ";
+						}
                     }
 					
                 } else {
@@ -443,7 +478,12 @@ var CTModule = CTModule || {
             if (black_crusade_degrees) {
                 display_msg += black_crusade_msg;
             }
+			if (display_successes) {
+				display_msg += display_successes_msg;
+			}
             
+			if (CTModule.debug_mode) {log(display_msg);}
+			
             sendChat('CTModule', display_msg);
          
             
